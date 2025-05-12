@@ -1,0 +1,45 @@
+name: Dynamic Green Squares
+
+on:
+  schedule:
+    - cron: '0 6 * * *'  # Every day at 6 AM UTC
+  workflow_dispatch:      # Allows manual runs
+
+jobs:
+  green-activity:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Make repo public
+        run: |
+          curl -X PATCH \
+            -H "Authorization: token ${{ secrets.GH_PAT }}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${{ github.repository }} \
+            -d '{"private":false}'
+
+      - uses: actions/checkout@v4
+
+      - name: Setup Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Random commits
+        run: |
+          NUM_COMMITS=$(( (RANDOM % 10) + 1 ))
+          for i in $(seq 1 $NUM_COMMITS); do
+            echo "Commit $i at $(date)" >> commit.log
+            git add commit.log
+            git commit -m "Commit $i on $(date)"
+            sleep $(( (RANDOM % 5) + 1 ))
+          done
+          git push
+
+      - name: Make repo private again
+        run: |
+          sleep 10
+          curl -X PATCH \
+            -H "Authorization: token ${{ secrets.GH_PAT }}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${{ github.repository }} \
+            -d '{"private":true}'
